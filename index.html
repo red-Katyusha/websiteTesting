@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Isma Danish | Tactical Portfolio</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Poppins:wght@300;400;600;800&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-color: #020202; 
+            --text-main: #ffffff;
+            --text-muted: #888c99;
+            --accent: linear-gradient(135deg, #aa0000, #ff2a2a); 
+            --glass-bg: rgba(5, 5, 5, 0.7);
+            --glass-border: rgba(255, 42, 42, 0.15);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Poppins', sans-serif; 
+            overflow: hidden; 
+        }
+
+        #webgl-canvas {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;
+        }
+
+        #ui-container { position: relative; z-index: 1; width: 100vw; height: 100vh; }
+
+        #back-btn {
+            position: fixed; top: 2rem; left: 2rem; z-index: 50; background: transparent;
+            border: 1px solid rgba(255, 42, 42, 0.3); color: #fff; width: 45px; height: 45px;
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            cursor: pointer; transition: all 0.3s ease; opacity: 0; pointer-events: none; backdrop-filter: blur(5px);
+        }
+        #back-btn:hover { background: #ff2a2a; box-shadow: 0 0 15px rgba(255, 42, 42, 0.5); transform: scale(1.1); }
+        #back-btn.show { opacity: 1; pointer-events: all; }
+
+        .chapter {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; padding: 0 10%;
+            opacity: 0; pointer-events: none; transition: opacity 1.2s ease-in-out, transform 1.2s ease-in-out; transform: translateY(30px); 
+        }
+        .chapter.active { opacity: 1; pointer-events: all; transform: translateY(0); }
+
+        .subtitle { font-size: 0.9rem; letter-spacing: 0.4em; text-transform: uppercase; color: #ff2a2a; margin-bottom: 1rem; font-weight: 600; }
+        
+        h1 {
+            font-family: 'Playfair Display', serif; font-size: clamp(3.5rem, 8vw, 6.5rem); font-weight: 400;
+            letter-spacing: 0.05em; text-transform: uppercase; line-height: 1; text-shadow: 0 10px 40px rgba(255,0,0,0.5); margin-bottom: 1.5rem;
+        }
+        
+        p { font-size: 1.05rem; color: var(--text-muted); max-width: 500px; line-height: 1.7; margin-bottom: 2rem; }
+
+        .glass-panel {
+            background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border); padding: 2.5rem; border-radius: 16px;
+            max-width: 600px; margin-bottom: 2rem; box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+            text-align: left; max-height: 55vh; overflow-y: auto;
+        }
+        .glass-panel::-webkit-scrollbar { width: 6px; }
+        .glass-panel::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        .glass-panel::-webkit-scrollbar-thumb { background: #aa0000; border-radius: 10px; }
+
+        .profile-wrapper { display: flex; align-items: center; gap: 2rem; margin-bottom: 1.5rem; }
+        .profile-img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #aa0000; box-shadow: 0 0 30px rgba(170, 0, 0, 0.5); flex-shrink: 0; }
+
+        .exp-item { border-bottom: 1px solid rgba(255, 42, 42, 0.1); margin-bottom: 1rem; padding-bottom: 0.5rem; }
+        .exp-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 0.8rem 0; transition: color 0.3s ease; }
+        .exp-header:hover { color: #ff2a2a; }
+        .exp-title { font-size: 1.1rem; font-weight: 600; }
+        .exp-year { font-family: monospace; color: #ff2a2a; font-size: 0.9rem;}
+        .exp-details { max-height: 0; overflow: hidden; transition: all 0.4s ease; opacity: 0; font-size: 0.95rem; color: var(--text-muted); }
+        .exp-item.open .exp-details { max-height: 150px; padding: 0.5rem 0 1.5rem 0; opacity: 1; }
+
+        .project-log {
+            display: flex; justify-content: space-between; align-items: center; padding: 1.2rem; background: rgba(20,0,0,0.4);
+            border: 1px solid rgba(255,42,42,0.1); border-radius: 8px; margin-bottom: 1rem; cursor: pointer; transition: all 0.3s ease;
+        }
+        .project-log:hover { border-color: #ff2a2a; transform: translateX(10px); background: rgba(255, 42, 42, 0.1); }
+
+        #project-modal {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px);
+            z-index: 100; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+        }
+        #project-modal.show { opacity: 1; pointer-events: all; }
+        
+        .modal-content { 
+            background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 2rem; 
+            border-radius: 16px; max-width: 650px; width: 90%; text-align: center; 
+            transform: translateY(20px); transition: transform 0.4s ease; position: relative;
+        }
+        #project-modal.show .modal-content { transform: translateY(0); }
+        
+        .modal-content img { width: 100%; height: auto; max-height: 350px; object-fit: contain; border-radius: 8px; margin-bottom: 1.5rem; border-bottom: 3px solid #ff2a2a; background: rgba(0,0,0,0.5); }
+        .close-modal { position: absolute; top: 1rem; right: 1.5rem; font-size: 1.5rem; color: #fff; cursor: pointer; }
+        .close-modal:hover { color: #ff2a2a; }
+
+        .btn-group { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; justify-content: center;}
+        .action-btn {
+            background: transparent; border: 1px solid rgba(255, 42, 42, 0.3); color: #fff; padding: 1rem 2.5rem; font-size: 0.9rem;
+            font-weight: 600; letter-spacing: 2px; text-transform: uppercase; border-radius: 50px; cursor: pointer; transition: all 0.4s ease;
+        }
+        .action-btn:hover { background: #ffffff; color: #000000; box-shadow: 0 0 20px rgba(255, 255, 255, 0.4); }
+        .action-btn.primary { background: var(--accent); border: none; color: #fff; }
+        .action-btn.primary:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(170, 0, 0, 0.6); }
+
+        input[type="email"] {
+            width: 100%; padding: 1.2rem 1.5rem 1.2rem 3rem; background: rgba(0,0,0,0.8); border: 1px solid rgba(255,42,42,0.2);
+            color: #fff; margin-bottom: 1.5rem; outline: none; border-radius: 50px; font-size: 1rem; transition: border-color 0.3s ease;
+        }
+        input[type="email"]:focus { border-color: #ff2a2a; }
+        .input-icon-wrapper { position: relative; width: 100%; }
+        .input-icon-wrapper i { position: absolute; left: 1.2rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); margin-top: -0.75rem; }
+
+        footer { position: fixed; bottom: 0; width: 100vw; padding: 1.5rem; text-align: center; z-index: 10; font-size: 0.8rem; color: #666; letter-spacing: 2px; pointer-events: none; }
+
+        #chap-0 { align-items: center; text-align: center; } 
+        #chap-1 { align-items: flex-start; text-align: left; } 
+        #chap-2 { align-items: flex-end; text-align: right; } 
+        #chap-3 { align-items: flex-start; text-align: left; } 
+        #chap-4 { align-items: center; text-align: center; } 
+
+        @media (max-width: 768px) {
+            .chapter { padding: 0 5% 4rem 5%; align-items: center !important; text-align: center !important; }
+            h1 { font-size: clamp(2rem, 10vw, 3rem) !important; margin-bottom: 1rem; }
+            .subtitle { font-size: 0.8rem; margin-bottom: 0.5rem; }
+            p { font-size: 0.95rem; text-align: center !important; margin: 0 auto 1.5rem auto !important; }
+            .glass-panel { padding: 1.5rem; max-height: 50vh; width: 100%; margin: 0 auto 1rem auto; text-align: center !important; }
+            .profile-wrapper { flex-direction: column; text-align: center; gap: 1rem; }
+            .profile-img { width: 100px; height: 100px; margin: 0 auto; }
+            .btn-group { flex-direction: column; width: 100%; gap: 0.8rem; align-items: center; justify-content: center !important; margin-top: 0.8rem; }
+            .action-btn { width: 100%; text-align: center; }
+            #back-btn { top: 1rem; left: 1rem; width: 35px; height: 35px; font-size: 0.8rem; }
+            .modal-content { padding: 1.5rem; width: 95%; max-height: 90vh; overflow-y: auto; }
+            .modal-content img { max-height: 200px; }
+            .close-modal { top: 0.5rem; right: 1rem; }
+            input[type="email"] { padding: 1rem 1.5rem 1rem 2.5rem; }
+            .input-icon-wrapper i { left: 1rem; }
+            footer { padding: 1rem; font-size: 0.7rem; opacity: 0.6; }
+        }
+    </style>
+</head>
+<body>
+
+    <audio id="bg-music" loop>
+        <source src="safe haven.mp3" type="audio/mpeg">
+    </audio>
+
+    <canvas id="webgl-canvas"></canvas>
+
+    <div id="back-btn" onclick="goBack()" title="Previous Page">
+        <i class="fa-solid fa-arrow-left"></i>
+    </div>
+
+    <footer>© All Rights Reserved | Isma Danish</footer>
+
+    <div id="ui-container">
+        
+        <section class="chapter active" id="chap-0">
+            <div class="subtitle">Assalamualaikum and Welcome</div>
+            <h1>My Portfolio - Isma Danish</h1>
+            <p>This is my tactical portfolio and I am excited to share my journey with you.</p>
+            <button class="action-btn primary" onclick="startPortfolio()">Initialize Profile</button>
+        </section>
+
+        <section class="chapter" id="chap-1">
+            <div class="subtitle">Log 01</div>
+            <h1>Identity</h1>
+            <div class="glass-panel">
+                <div class="profile-wrapper">
+                    <img src="image/who is this.jpeg" alt="Isma Danish Profile" class="profile-img">
+                    <div>
+                        <h3 style="color: #fff; font-size: 1.5rem; margin-bottom: 0.5rem;">Isma Danish bin Ismail</h3>
+                        <p style="margin: 0; font-size: 0.95rem;">I am a student at the University Tun Hussein Onn. I am passionate about web development, programming and cybersecurity. I want to have more experience in these fields and work under NVIDIA.</p>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <a href="https://youtube.com/@ghostrival7?si=_T23BLRpZc_n4LsE" target="_blank" class="action-btn"><i class="fa-brands fa-youtube"></i> YouTube</a>
+                    <a href="https://www.instagram.com/red_katyushaa?igsi=MXVqeHlrdndrM2ZpdA==" target="_blank" class="action-btn"><i class="fa-brands fa-instagram"></i> Instagram</a>
+                </div>
+                <div class="btn-group" style="margin-top: 1rem;">
+                    <a href="https://discordapp.com/users/123456789012345678" target="_blank" class="action-btn"><i class="fa-brands fa-discord"></i> Discord</a>
+                </div>
+            </div>
+            <button class="action-btn" onclick="changeChapter(2)">Review Experience</button>
+        </section>
+
+        <section class="chapter" id="chap-2">
+            <div class="subtitle">Log 02</div>
+            <h1>My Experience</h1>
+            <div class="glass-panel">
+                <div class="exp-item" onclick="toggleExp(this)">
+                    <div class="exp-header"><span class="exp-title"><i class="fa-solid fa-laptop-code"></i> Making Restaurant Web Using SQL and Xampp</span><span class="exp-year">1 Years 6 Months</span></div>
+                    <div class="exp-details">I created a responsive restaurant website using HTML, CSS, JavaScript, SQL, and Xampp during highschool and i got full mark on the assignment.</div>
+                </div>
+                <div class="exp-item" onclick="toggleExp(this)">
+                    <div class="exp-header"><span class="exp-title"><i class="fa-solid fa-keyboard"></i> Fast Typing in coding language</span><span class="exp-year">11 years</span></div>
+                    <div class="exp-details">I can type quickly and accurately in various programming languages and i decide to finish my highschool assignment earlier than the deadline. I have 11 years experience of typing on the keyboard. 50-70 word per minute.</div>
+                </div>
+                <div class="exp-item" onclick="toggleExp(this)">
+                    <div class="exp-header"><span class="exp-title"><i class="fa-solid fa-briefcase"></i> Working environment in the early stages of my career</span><span class="exp-year">6 Months</span></div>
+                    <div class="exp-details">I have an experience with interviewing and job searching. Not only that I manage to create a good impression during the interviews.</div>
+                </div>
+                <div class="exp-item" onclick="toggleExp(this)">
+                    <div class="exp-header"><span class="exp-title"><i class="fa-solid fa-bread-slice"></i> Food Handling/Food and Beverage Service</span><span class="exp-year">4 Months</span></div>
+                    <div class="exp-details">I am a sandwichstar, cashier and barista back in the day at O'Briens.</div>
+                </div>
+                <div class="exp-item" onclick="toggleExp(this)">
+                    <div class="exp-header"><span class="exp-title"><i class="fa-solid fa-computer"></i> BEST IT STUDENT</span><span class="exp-year">larp larp larp sahur</span></div>
+                    <div class="exp-details">hahaha keep larping mate i know what you trying to said.</div>
+                </div>
+            </div>
+            <button class="action-btn" onclick="changeChapter(3)">View Arsenal</button>
+        </section>
+
+        <section class="chapter" id="chap-3">
+            <div class="subtitle">Log 03</div>
+            <h1>Deployments</h1>
+            <div class="glass-panel">
+                <div class="project-log" onclick="openProjectModal('image/sijil pengendalian makanan.jpeg', 'Food Handling Certificate', 'I can work on any restaurant with this certificate. Unless my typhoid injection has ended. I still have 2 years 3 months left.', 'https://trollingahhh.netlify.app/')">
+                    <h3 style="color: #fff; margin:0; font-size: 1.2rem;">Food Handling Certificate</h3>
+                    <i class="fa-solid fa-arrow-right" style="color: #ff2a2a;"></i>
+                </div>
+                <div class="project-log" onclick="openProjectModal('image/google certification.jpeg', 'Gemini Google Certification', 'Successfully acquired the Gemini Certified Student qualification for demonstrating knowledge and basic competencies in Google AI.', 'https://trollingahhh.netlify.app/')">
+                    <h3 style="color: #fff; margin:0; font-size: 1.2rem;"> Gemini Google Certification</h3>
+                    <i class="fa-solid fa-arrow-right" style="color: #ff2a2a;"></i>
+                </div>
+                <div class="project-log" onclick="openProjectModal('image/typing.png', 'Typing Certification', 'I manage to type at 70 words per minute with 95% accuracy.', 'https://trollingahhh.netlify.app/')">
+                    <h3 style="color: #fff; margin:0; font-size: 1.2rem;"> Typing Certification</h3>
+                    <i class="fa-solid fa-arrow-right" style="color: #ff2a2a;"></i>
+                </div>
+                <div class="project-log" onclick="openProjectModal('image/yo is that mig.jpeg', 'Incoming Certification', 'I think its Cybersecurity Certification but lets fly to moscow first', 'https://trollingahhh.netlify.app/')">
+                    <h3 style="color: #fff; margin:0; font-size: 1.2rem;">Incoming Certification</h3>
+                    <i class="fa-solid fa-arrow-right" style="color: #ff2a2a;"></i>
+                </div>
+            </div>
+            <button class="action-btn primary" onclick="changeChapter(4)">Initiate Contact</button>
+        </section>
+
+        <section class="chapter" id="chap-4">
+            <div class="subtitle">Final Sequence</div>
+            <h1 class="transmit-title">Transmit</h1>
+            <div class="glass-panel">
+                <p>Establish a secure connection to headquarters.</p>
+                <form name="contact" method="POST" netlify data-netlify="true">
+                    <input type="hidden" name="form-name" value="contact" />
+                    <div class="input-icon-wrapper">
+                        <i class="fa-solid fa-envelope"></i>
+                        <input type="email" name="email" placeholder="comrade@example.com" required>
+                    </div>
+                    <button type="submit" class="action-btn primary" style="width: 100%;">Submit Form</button>
+                </form>
+            </div>
+            <button class="action-btn" onclick="changeChapter(0)">Restart System</button>
+        </section>
+
+    </div>
+
+    <div id="project-modal" onclick="if(event.target === this) closeProjectModal()">
+        <div class="modal-content">
+            <i class="fa-solid fa-xmark close-modal" onclick="closeProjectModal()"></i>
+            <img id="modal-img" src="" alt="Project Image">
+            <h2 id="modal-title" style="color: #fff; margin-bottom: 0.5rem;">Title</h2>
+            <p id="modal-desc" style="margin: 0 auto 1.5rem auto;">Description goes here.</p>
+            <div class="btn-group">
+                <a id="modal-link-1" href="#" target="_blank" class="action-btn primary">wow cool</a>
+                <a id="modal-link-2" href="#" target="_blank" class="action-btn">More Info</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+
+        let currentChapter = 0;
+
+        function startPortfolio() {
+            const music = document.getElementById("bg-music");
+            if (music.paused) { music.volume = 0.5; music.play().catch(e => console.log("Audio blocked.")); }
+            changeChapter(1);
+        }
+
+        function goBack() { if (currentChapter > 0) changeChapter(currentChapter - 1); }
+
+        function toggleExp(element) {
+            document.querySelectorAll('.exp-item').forEach(item => { if (item !== element) item.classList.remove('open'); });
+            element.classList.toggle('open');
+        }
+
+        function openProjectModal(imgSrc, title, desc, link) {
+            document.getElementById('modal-img').src = imgSrc;
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-desc').innerText = desc;
+            document.getElementById('modal-link-1').href = link;
+            document.getElementById('modal-link-2').href = link;
+            document.getElementById('project-modal').classList.add('show');
+        }
+
+        function closeProjectModal() { document.getElementById('project-modal').classList.remove('show'); }
+
+        const canvas = document.querySelector('#webgl-canvas');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050505, 0.035); 
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        scene.add(camera); // Must add camera to scene to attach Hologram HUD correctly
+
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const ambientLight = new THREE.AmbientLight(0x333333, 2.5); scene.add(ambientLight);
+        const moonLight = new THREE.DirectionalLight(0x7788aa, 3.5); moonLight.position.set(-10, 15, 10); scene.add(moonLight);
+        const cursedGlow = new THREE.PointLight(0xff0000, 8, 20); cursedGlow.position.set(0, 3, 0); scene.add(cursedGlow);
+
+        const shrineGroup = new THREE.Group();
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0x5a1111, roughness: 0.8 }); 
+        const blackMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 });
+        const stoneMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 1.0 });
+
+        const pillarGeo = new THREE.CylinderGeometry(0.3, 0.3, 6, 16);
+        const leftPillar = new THREE.Mesh(pillarGeo, woodMat); leftPillar.position.set(-2.5, 3, 0); shrineGroup.add(leftPillar);
+        const rightPillar = new THREE.Mesh(pillarGeo, woodMat); rightPillar.position.set(2.5, 3, 0); shrineGroup.add(rightPillar);
+
+        const topBeam = new THREE.Mesh(new THREE.BoxGeometry(7.5, 0.5, 0.6), blackMat); topBeam.position.set(0, 6.2, 0); shrineGroup.add(topBeam);
+        const subBeam = new THREE.Mesh(new THREE.BoxGeometry(6.5, 0.4, 0.5), woodMat); subBeam.position.set(0, 5.7, 0); shrineGroup.add(subBeam);
+        const midBeam = new THREE.Mesh(new THREE.BoxGeometry(6.5, 0.3, 0.3), woodMat); midBeam.position.set(0, 4.2, 0); shrineGroup.add(midBeam);
+
+        const baseGeo = new THREE.CylinderGeometry(0.6, 0.8, 0.5, 8);
+        const leftBase = new THREE.Mesh(baseGeo, stoneMat); leftBase.position.set(-2.5, 0.25, 0); shrineGroup.add(leftBase);
+        const rightBase = new THREE.Mesh(baseGeo, stoneMat); rightBase.position.set(2.5, 0.25, 0); shrineGroup.add(rightBase);
+
+        scene.add(shrineGroup);
+
+        const waterGeo = new THREE.PlaneGeometry(500, 500); 
+        const waterMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0c, roughness: 0.15, metalness: 0.8 });
+        const ocean = new THREE.Mesh(waterGeo, waterMat);
+        ocean.rotation.x = -Math.PI / 2; ocean.position.y = 0; scene.add(ocean);
+
+        const gridHelper = new THREE.GridHelper(500, 100, 0x550000, 0x220000);
+        gridHelper.position.y = -0.01; scene.add(gridHelper);
+
+        const ashCount = 2000;
+        const ashGeo = new THREE.BufferGeometry();
+        const ashPos = new Float32Array(ashCount * 3);
+        for(let i = 0; i < ashCount * 3; i+=3) {
+            ashPos[i] = (Math.random() - 0.5) * 40; ashPos[i+1] = Math.random() * 20; ashPos[i+2] = (Math.random() - 0.5) * 40; 
+        }
+        ashGeo.setAttribute('position', new THREE.BufferAttribute(ashPos, 3));
+        const ashParticles = new THREE.Points(ashGeo, new THREE.PointsMaterial({ color: 0x777777, size: 0.06, transparent: true, opacity: 0.5 }));
+        scene.add(ashParticles);
+
+        function createBloodMoon() {
+            const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 512; const ctx = canvas.getContext('2d');
+            const glow = ctx.createRadialGradient(256, 256, 50, 256, 256, 256);
+            glow.addColorStop(0, 'rgba(255, 0, 0, 0.9)'); glow.addColorStop(0.5, 'rgba(200, 0, 0, 0.4)'); glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = glow; ctx.fillRect(0, 0, 512, 512);
+            ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#ff3333'; ctx.shadowBlur = 60; ctx.shadowColor = '#ff0000';
+            ctx.beginPath(); ctx.arc(256, 256, 80, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ffcccc'; ctx.shadowBlur = 20; ctx.shadowColor = '#ff0000';
+            ctx.beginPath(); ctx.arc(256, 256, 75, 0, Math.PI * 2); ctx.fill();
+            ctx.globalCompositeOperation = 'destination-out'; ctx.shadowBlur = 0;
+            ctx.beginPath(); ctx.arc(205, 205, 90, 0, Math.PI * 2); ctx.fill();
+            return new THREE.CanvasTexture(canvas);
+        }
+        
+        const moonMat = new THREE.SpriteMaterial({ map: createBloodMoon(), color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending });
+        const bloodMoon = new THREE.Sprite(moonMat);
+        bloodMoon.scale.set(30, 30, 1); bloodMoon.position.set(-15, 18, -25);
+        scene.add(bloodMoon);
+
+        const quantumGroup = new THREE.Group();
+        camera.add(quantumGroup); // Attach directly to camera so it moves with the screen
+
+        const config = { nodesCount: 373, beamsCount: 756, coreScale: 1.25 };
+        const N_POINTS = 120, STRANDS = 3;
+
+        const baseCuboctahedron = [
+            new THREE.Vector3(1,1,0), new THREE.Vector3(1,-1,0), new THREE.Vector3(-1,1,0), new THREE.Vector3(-1,-1,0),
+            new THREE.Vector3(1,0,1), new THREE.Vector3(1,0,-1), new THREE.Vector3(-1,0,1), new THREE.Vector3(-1,0,-1),
+            new THREE.Vector3(0,1,1), new THREE.Vector3(0,1,-1), new THREE.Vector3(0,-1,1), new THREE.Vector3(0,-1,-1)
+        ];
+        
+        const coreEdges = [];
+        for (let i = 0; i < 12; i++) {
+            for (let j = i + 1; j < 12; j++) {
+                const distSq = baseCuboctahedron[i].distanceToSquared(baseCuboctahedron[j]);
+                if (distSq > 1.9 && distSq < 2.1) coreEdges.push([i, j]);
+            }
+        }
+
+        const CustomVertexShader = `varying vec2 vUv; varying vec3 vNormal; varying vec3 vViewPosition; void main() { vUv = uv; vec4 localNormal = instanceMatrix * vec4(normal, 0.0); vNormal = normalize(normalMatrix * localNormal.xyz); vec4 localPosition = instanceMatrix * vec4(position, 1.0); vec4 mvPosition = modelViewMatrix * localPosition; vViewPosition = -mvPosition.xyz; gl_Position = projectionMatrix * mvPosition; }`;
+        const TubeFragmentShader = `varying vec2 vUv; varying vec3 vNormal; varying vec3 vViewPosition; uniform float uTime; uniform vec3 uColorCyan; uniform vec3 uColorMagenta; uniform vec3 uColorGold; void main() { vec3 normal = normalize(vNormal); vec3 viewDir = normalize(vViewPosition + vec3(0.0, 0.0, 0.0001)); float fresnel = pow(clamp(1.0 - abs(dot(viewDir, normal)), 0.0, 1.0), 3.0); float speedFactor = uTime * 4.8; float wave1 = sin(vUv.y * 18.0 - speedFactor); float wave2 = cos(vUv.y * 36.0 + speedFactor * 0.8); float energyFlux = smoothstep(0.2, 0.8, (wave1 * wave2) * 0.5 + 0.5); float grid = max(smoothstep(max(fwidth(sin(vUv.x * 12.5)), 0.001) * 1.5, 0.0, abs(sin(vUv.x * 12.5))), 0.0); vec3 surfaceColor = mix(uColorMagenta * 0.2, uColorCyan, fresnel); vec3 finalColor = mix(mix(surfaceColor, uColorMagenta * 1.8, energyFlux), uColorGold * 1.5, grid * 0.45); float alpha = mix(0.12 + fresnel * 0.65, 1.0, (grid * 0.75) + (energyFlux * 0.35)); gl_FragColor = vec4(clamp(finalColor, vec3(0.0), vec3(2.5)), clamp(alpha, 0.0, 1.0)); }`;
+        const NodeFragmentShader = `varying vec2 vUv; varying vec3 vNormal; varying vec3 vViewPosition; uniform vec3 uColorCyan; uniform vec3 uColorMagenta; uniform vec3 uColorWhite; void main() { vec3 normal = normalize(vNormal); vec3 viewDir = normalize(vViewPosition + vec3(0.0, 0.0, 0.0001)); float fresnel = pow(clamp(1.0 - abs(dot(viewDir, normal)), 0.0, 1.0), 2.5); float dist = length(vUv - vec2(0.5)); float centralReactor = smoothstep(0.28, 0.0, dist); vec3 finalColor = mix(mix(uColorMagenta, uColorCyan, fresnel), uColorWhite, centralReactor * 0.95); gl_FragColor = vec4(clamp(finalColor, vec3(0.0), vec3(2.5)), clamp(mix(0.3 + fresnel * 0.7, 1.0, centralReactor), 0.0, 1.0)); }`;
+
+        const qUniforms = {
+            uTime: { value: 0 },
+            uColorCyan: { value: new THREE.Color("#00ffff") },    
+            uColorMagenta: { value: new THREE.Color("#ff007f") }, 
+            uColorGold: { value: new THREE.Color("#ffaa00") },    
+            uColorWhite: { value: new THREE.Color("#ffffff") }
+        };
+
+        const nodeMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 16, 16), new THREE.ShaderMaterial({ vertexShader: CustomVertexShader, fragmentShader: NodeFragmentShader, uniforms: qUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }), config.nodesCount);
+        const beamMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 8, 1, false), new THREE.ShaderMaterial({ vertexShader: CustomVertexShader, fragmentShader: TubeFragmentShader, uniforms: qUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }), config.beamsCount);
+        quantumGroup.add(nodeMesh); 
+        quantumGroup.add(beamMesh);
+
+        function getShapePositions(shapeIndex) {
+            const positions = [];
+            for (let s = 0; s < STRANDS; s++) {
+                for (let i = 0; i < N_POINTS; i++) {
+                    let u = (i / N_POINTS) * Math.PI * 2, v = (s / STRANDS) * Math.PI * 2 + (i / N_POINTS) * Math.PI * 4, p = new THREE.Vector3();
+                    if (shapeIndex === 0) p.set((4 + 1.5 * Math.cos(v)) * Math.cos(u), (4 + 1.5 * Math.cos(v)) * Math.sin(u), 1.5 * Math.sin(v)); // Torus
+                    else if (shapeIndex === 1) { // Cube
+                        let nx = Math.cos(u) * Math.sin(v), ny = Math.sin(u) * Math.sin(v), nz = Math.cos(v), max = Math.max(Math.abs(nx), Math.abs(ny), Math.abs(nz));
+                        p.set((nx / max) * 4, (ny / max) * 4, (nz / max) * 4);
+                    } else if (shapeIndex === 2) { // Star
+                        let r = 3 + 2.5 * Math.sin(u * 5) * Math.sin(v * 5); p.set(Math.cos(u) * Math.sin(v) * r, Math.sin(u) * Math.sin(v) * r, Math.cos(v) * r);
+                    } else p.set(5 * Math.cos(u) * Math.sin(v), 5 * Math.sin(u) * Math.sin(v), 5 * Math.cos(v)); // Cage
+                    positions.push(p);
+                }
+            }
+            for (let i = 0; i < 12; i++) positions.push(baseCuboctahedron[i].clone().multiplyScalar(config.coreScale * (shapeIndex === 1 ? 1.5 : 1)));
+            positions.push(new THREE.Vector3(0, 0, 0)); return positions;
+        }
+
+        const beams = [];
+        for (let s = 0; s < STRANDS; s++) { for (let i = 0; i < N_POINTS; i++) beams.push([s * N_POINTS + i, s * N_POINTS + (i + 1) % N_POINTS]); }
+        for (let i = 0; i < N_POINTS; i++) beams.push([i, N_POINTS + i], [N_POINTS + i, 2 * N_POINTS + i], [2 * N_POINTS + i, i]);
+        for (let e of coreEdges) beams.push([360 + e[0], 360 + e[1]]);
+        for (let i = 0; i < 12; i++) beams.push([360 + i, 372]);
+
+        let currentPos = getShapePositions(0);
+        let targetPos = getShapePositions(0);
+
+        const tempMatrix = new THREE.Matrix4(), tempObject = new THREE.Object3D(), scratchDir = new THREE.Vector3(), upVector = new THREE.Vector3(0, 1, 0);
+
+        function getCylinderMatrix(vA, vB, radius, targetMatrix) {
+            scratchDir.subVectors(vB, vA); const length = scratchDir.length();
+            if (length < 0.0001) { tempObject.scale.set(0, 0, 0); tempObject.updateMatrix(); targetMatrix.copy(tempObject.matrix); return; }
+            scratchDir.normalize(); tempObject.position.addVectors(vA, vB).multiplyScalar(0.5); tempObject.quaternion.setFromUnitVectors(upVector, scratchDir);
+            tempObject.scale.set(radius, length, radius); tempObject.updateMatrix(); targetMatrix.copy(tempObject.matrix);
+        }
+
+        let targetCamPos = new THREE.Vector3(0, 2, 18);
+        let targetCamRot = new THREE.Vector3(0, 0, 0);
+        let targetShrineRot = new THREE.Vector3(0, 0, 0);
+        
+        let targetQuantumPos = new THREE.Vector3(0, 0, 0);
+        let targetQuantumScale = 0; // Starts invisible
+        
+        camera.position.copy(targetCamPos);
+
+        function changeChapter(chapterIndex) {
+            currentChapter = chapterIndex;
+            
+            const backBtn = document.getElementById('back-btn');
+            if (currentChapter > 0) backBtn.classList.add('show');
+            else backBtn.classList.remove('show');
+
+            document.querySelectorAll('.chapter').forEach(chap => chap.classList.remove('active'));
+            document.getElementById(`chap-${chapterIndex}`).classList.add('active');
+
+            const isMobile = window.innerWidth <= 768;
+            targetPos = getShapePositions(chapterIndex % 4); // Morphs geometry shape per page
+
+            if (chapterIndex === 0) { 
+                targetCamPos.set(0, 2, isMobile ? 22 : 16); 
+                targetCamRot.set(0, 0, 0); 
+                targetShrineRot.set(0, 0, 0); 
+                targetQuantumScale = 0; 
+            } 
+            else if (chapterIndex === 1) { 
+                targetCamPos.set(isMobile ? 0 : -5, 1.5, isMobile ? 18 : 12); 
+                targetCamRot.set(isMobile ? 0 : 0.1, isMobile ? 0 : -0.35, 0); 
+                targetShrineRot.set(0, isMobile ? 0 : -0.3, 0); 
+                targetQuantumPos.set(isMobile ? 0 : 4.5, 0.8, -10); 
+                targetQuantumScale = isMobile ? 0.25 : 0.45; 
+                
+                qUniforms.uColorCyan.value.set("#00ffff");
+                qUniforms.uColorMagenta.value.set("#ff007f");
+                qUniforms.uColorGold.value.set("#ffaa00");
+            } 
+            else if (chapterIndex === 2) { 
+                targetCamPos.set(isMobile ? 0 : 6, 0.5, isMobile ? 16 : 10); 
+                targetCamRot.set(isMobile ? 0.1 : 0.2, isMobile ? 0 : 0.4, 0); 
+                targetShrineRot.set(0, isMobile ? 0 : 0.6, 0); 
+                targetQuantumPos.set(isMobile ? 0 : -5.5, 0.8, -10); 
+                targetQuantumScale = isMobile ? 0.25 : 0.45; 
+                
+                qUniforms.uColorCyan.value.set("#00ff66");
+                qUniforms.uColorMagenta.value.set("#2600ff");
+                qUniforms.uColorGold.value.set("#f2ff00");
+            }
+            else if (chapterIndex === 3) { 
+                targetCamPos.set(isMobile ? 0 : -4, 6, isMobile ? 16 : 12); 
+                targetCamRot.set(-0.25, isMobile ? 0 : -0.25, 0); 
+                targetShrineRot.set(0, isMobile ? 0 : 0.2, 0); 
+                targetQuantumPos.set(isMobile ? 0 : 4.5, 0.8, -10); 
+                targetQuantumScale = isMobile ? 0.25 : 0.45; 
+                
+                qUniforms.uColorCyan.value.set("#ff003c");
+                qUniforms.uColorMagenta.value.set("#9d00ff");
+                qUniforms.uColorGold.value.set("#ff8c00");
+            }
+            else if (chapterIndex === 4) { 
+                targetCamPos.set(0, 2, isMobile ? -20 : -14); 
+                targetCamRot.set(0, Math.PI, 0); 
+                targetShrineRot.set(0, 0, 0); 
+                targetQuantumScale = 0; 
+            }
+        }
+
+        function animate(time) {
+            requestAnimationFrame(animate);
+            qUniforms.uTime.value = time * 0.001;
+
+            const pos = ashParticles.geometry.attributes.position.array;
+            for(let i = 1; i < ashCount * 3; i+=3) { pos[i] -= 0.05; if(pos[i] < 0) pos[i] = 20; }
+            ashParticles.geometry.attributes.position.needsUpdate = true;
+            ashParticles.rotation.y -= 0.0005;
+
+            camera.position.lerp(targetCamPos, 0.02);
+            camera.rotation.x += (targetCamRot.x - camera.rotation.x) * 0.02;
+            let dy = targetCamRot.y - camera.rotation.y;
+            while(dy > Math.PI) dy -= Math.PI * 2; while(dy < -Math.PI) dy += Math.PI * 2;
+            camera.rotation.y += dy * 0.02;
+            camera.rotation.z += (targetCamRot.z - camera.rotation.z) * 0.02;
+
+            shrineGroup.rotation.y += (targetShrineRot.y - shrineGroup.rotation.y) * 0.015;
+            camera.position.y += Math.sin(Date.now() * 0.0005) * 0.005;
+            cursedGlow.intensity = 6 + Math.random() * 2;
+
+            quantumGroup.position.lerp(targetQuantumPos, 0.05);
+            quantumGroup.scale.lerp(new THREE.Vector3(targetQuantumScale, targetQuantumScale, targetQuantumScale), 0.05);
+            quantumGroup.rotation.y += 0.005;
+            quantumGroup.rotation.x += 0.002;
+
+            for (let i = 0; i < config.nodesCount; i++) {
+                currentPos[i].lerp(targetPos[i], 0.08);
+                tempObject.position.copy(currentPos[i]);
+                tempObject.scale.setScalar(i >= 360 ? (i == 372 ? 0.8 : 0.25) : 0.06);
+                tempObject.updateMatrix();
+                nodeMesh.setMatrixAt(i, tempObject.matrix);
+            }
+            nodeMesh.instanceMatrix.needsUpdate = true;
+
+            for (let i = 0; i < beams.length; i++) {
+                getCylinderMatrix(currentPos[beams[i][0]], currentPos[beams[i][1]], beams[i][0] >= 360 ? 0.04 : 0.012, tempMatrix);
+                beamMesh.setMatrixAt(i, tempMatrix);
+            }
+            beamMesh.instanceMatrix.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+        
+        animate(0); 
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            changeChapter(currentChapter);
+        });
+    </script>
+</body>
+</html>
